@@ -1,0 +1,27 @@
+# prints um words in decimal
+.zero r0
+r0 := 0
+.temp r6, r7
+
+.section text
+    #print_r:
+    #    push r1 on stack r2
+    #    push r4 on stack r2
+    #    if (r4 <s 57) goto second_check using r5
+
+    print:
+        output "made it to print\n"
+        push r1 on stack r2
+        push r4 on stack r2
+        r3 := m[r0][r2]
+        r3 := r3 + 48
+        output r3
+        output '\n'
+
+        pop r4 off stack r2
+        pop r5 off stack r2
+        goto r5
+
+    #second_check:
+    #    output "second check\n"
+    #    if (r4 >s 48) goto print using r5
