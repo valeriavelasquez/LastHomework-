@@ -1,0 +1,192 @@
+# contains calculator related data structures and
+#functions
+.zero r0
+r0 := 0
+.temp r6, r7
+
+
+.section init
+    r3 := jump_table
+
+    set_table_err:
+        if (r3 == jump_table + 256) goto init_table using r5
+        m[r0][r3] := input_error
+        r3 := r3 + 1
+        goto set_table_err
+
+    init_table:
+        r3 := jump_table + 48
+
+        set_digit:
+            if (r3 == jump_table + 58) goto init_operators using r5
+            m[r0][r3] := digit
+            r3 := r3 + 1
+            goto set_digit
+
+        init_operators:
+            r3 := jump_table
+            m[r0][r3 + ' '] := waiting
+            m[r0][r3 + '+'] := sum
+            m[r0][r3 + '-'] := subtract
+            m[r0][r3 + '\n'] := print_stack
+            m[r0][r3 + '*'] := mult
+            m[r0][r3 + '/'] := div
+            m[r0][r3 + '|'] := or
+            m[r0][r3 + '&'] := and
+
+
+        r3 := value_stack
+        goto waiting
+        #add all operators
+
+
+
+
+.section rodata
+    r3 := value_stack
+    digit:
+        #output r4
+        #output '\n'
+        r4 := r4 - 48
+        push r4 on stack r3
+        goto entering
+        #deal with digit conversions b4 pushing on value stack
+
+//IMPLEMENTATION OF ALL OPERATORS
+.section text
+    sum:
+        goto check_one linking r1
+        pop r4 off stack r3
+        pop r5 off stack r3
+        r4 := r5 + r4
+        push r4 on stack r3
+        goto waiting
+
+    subtract:
+      goto check_one linking r1
+      pop r4 off stack r3
+      pop r5 off stack r3
+      r4 := r5 - r4
+      push r4 on stack r3
+      goto waiting
+
+    mult:
+     goto check_one linking r1
+     pop r4 off stack r3
+     pop r5 off stack r3
+     r4 := r5 * r4
+     push r4 on stack r3
+     goto waiting
+
+   div:
+      goto check_one linking r1
+      pop r4 off stack r3
+      pop r5 off stack r3
+      r4 := r5 / r4
+      push r4 on stack r3
+      goto waiting
+
+    or:
+      goto check_one linking r1
+      pop r4 off stack r3
+      pop r5 off stack r3
+      r4 := r5 | r4
+      push r4 on stack r3
+      goto waiting
+
+    and:
+      goto check_one linking r1
+      pop r4 off stack r3
+      pop r5 off stack r3
+      r4 := r5 & r4
+      push r4 on stack r3
+      goto waiting
+
+
+    print_stack:
+        //HOW DO WE DO THIS PIECE OF MEMORY PROPERLY ARGH
+        m[r0][10000] := r3
+        goto print_loop
+
+        print_loop:
+        if (r3 == value_stack) goto reset_value_ptr using r1
+        output ">>> "
+        r4 := m[r0][r3]
+        goto print linking r1
+        output '\n'
+        r3 := r3 + 1
+        goto print_loop
+
+        reset_value_ptr:
+        r3 := m[r0][10000]
+        goto waiting
+
+    print_top:
+        r4 := m[r0][r3]
+        output "top of stack: "
+        goto print linking r1
+        goto waiting
+
+//MAIN LOOP OF CALCULATOR
+.section text
+    waiting:
+        output "waiting\n"
+        r4 := input()
+        #how do we check if the input is an integer
+        goto waiting_with_character
+
+    waiting_with_character:
+        output "waiting with char\n"
+        r5 := ~0
+        if (r5 == r4) goto finish using r1
+
+        r5 := jump_table + r4
+        r5 := m[r0][r5]
+        goto r5
+
+    entering:
+        output "entering\n"
+        r4 := input()
+        if(r4 >s 57) goto waiting_with_character using r5
+        if(r4 <s 48) goto waiting_with_character using r5
+        output "two digits\n"
+        #make sure num going to the stack is not in ASCII
+        pop r5 off stack r3
+        r5 := r5 * 10
+        r4 := r4 - 48
+        r5 := r5 + r4
+        push r5 on stack r3
+        r4 := r5
+        #output r4 + 48
+        #goto print linking r1
+        output "returned to entering?\n"
+        goto entering
+
+    finish:
+        output "done!\n"
+        #make sure to clean up stack before leaving
+        halt
+
+    input_error:
+        output "input error\n"
+
+//CHECKS
+.section text
+
+    check_empty:
+        if(r3 == value_stack) goto error_empty using r5
+        goto r1
+
+    check_one:
+        output "in check one\n"
+        r4 := r3 + 1
+        if(r4 == value_stack) goto error_one using r5
+        goto r1
+
+    error_empty:
+        output "Stack underflow---expected at least 1 element\n"
+        goto waiting
+
+    error_one:
+       output "Stack underflow---expected at least 2 elements\n"
+       goto waiting
