@@ -1,0 +1,37 @@
+# prints um words in decimal
+.zero r0
+r0 := 0
+.temp r6, r7
+
+.section text
+    print:
+        push r1 on stack r2
+        push r4 on stack r2
+        r4 := m[r0][r2]
+        if (r4 <s 0) goto print_neg using r5
+        if (r4 <s 10) goto base_case using r5
+
+        recursive_call:
+        r5 := r4 mod 10
+        r4 := r4 / 10
+        push r5 on stack r2
+        goto print linking r1
+        pop r5 off stack r2
+        output r5 + 48
+        goto finish_print
+
+    base_case:
+        pop r4 off stack r2
+        pop r1 off stack r2
+        output r4 + 48
+        goto r1
+
+    finish_print:
+        pop r4 off stack r2
+        pop r5 off stack r2
+        goto r5
+
+    print_neg:
+        output '-'
+        r4 := -r4
+        goto print

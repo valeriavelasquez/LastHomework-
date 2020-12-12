@@ -1,0 +1,22 @@
+# contains startup code to allocate space for the call stack (in the data
+# section) and initialize both the stack pointer and register 0 (in init)
+.zero r0
+r0 := 0
+.temp r6, r7
+
+.section init
+    jump_table:
+    .space 256
+
+
+r2 := call_stack
+
+.section data
+    call_stack:
+    .space 10000
+
+    value_stack:
+    .space 10000
+
+    stack_count:
+    .space 10
