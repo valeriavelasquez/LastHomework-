@@ -4,6 +4,14 @@
 r0 := 0
 .temp r6, r7
 
+.section rodata
+    jump_table:
+    .space 256
+
+.section data
+    value_stack:
+    .space 10000
+
 
 .section init
     r3 := jump_table
@@ -33,11 +41,16 @@ r0 := 0
             m[r0][r3 + '/'] := div
             m[r0][r3 + '|'] := or
             m[r0][r3 + '&'] := and
+            m[r0][r3 + 'c'] := change_sign
+            m[r0][r3 + '~'] := complement
+            m[r0][r3 + 's'] := swap
+            m[r0][r3 + 'd'] := duplicate
+            m[r0][r3 + 'p'] := pop_off
+            m[r0][r3 + 'z'] := zero_stack
 
 
         r3 := value_stack
         goto waiting
-        #add all operators
 
 
 
@@ -45,8 +58,6 @@ r0 := 0
 .section rodata
     r3 := value_stack
     digit:
-        #output r4
-        #output '\n'
         r4 := r4 - 48
         push r4 on stack r3
         goto entering
@@ -81,10 +92,40 @@ r0 := 0
    div:
       goto check_one linking r1
       pop r4 off stack r3
+      if (r4 == 0) goto div_zero using r5
       pop r5 off stack r3
+      if (r4 <s 0) goto neg_div_a using r1
+      if (r5 <s 0) goto neg_div_b using r1
+      pos_div:
       r4 := r5 / r4
       push r4 on stack r3
       goto waiting
+
+      neg_div_a:
+      if (r5 <s 0) goto neg_div_c using r1
+      r4 := -r4
+      r4 := r5 / r4
+      r4 := -r4
+      push r4 on stack r3
+      goto waiting
+
+      neg_div_b:
+      r5 := -r5
+      r4 := r5 / r4
+      r4 := -r4
+      push r4 on stack r3
+      goto waiting
+
+      neg_div_c:
+      r4 := -r4
+      r5 := -r5
+      r4 := r5 / r4
+      push r4 on stack r3
+      goto waiting
+
+
+
+
 
     or:
       goto check_one linking r1
@@ -102,10 +143,50 @@ r0 := 0
       push r4 on stack r3
       goto waiting
 
+     change_sign:
+        goto check_empty linking r1
+        pop r4 off stack r3
+        r4 := -r4
+        push r4 on stack r3
+        goto waiting
+
+      complement:
+        goto check_empty linking r1
+        pop r4 off stack r3
+        r4 := ~r4
+        push r4 on stack r3
+        goto waiting
+
+      swap:
+          goto check_one linking r1
+          pop r4 off stack r3
+          pop r5 off stack r3
+          push r4 on stack r3
+          push r5 on stack r3
+          goto waiting
+
+      duplicate:
+          goto check_empty linking r1
+          pop r5 off stack r3
+          push r5 on stack r3
+          push r5 on stack r3
+          goto waiting
+
+     pop_off:
+          goto check_empty linking r1
+          pop stack r3
+          goto waiting
+
+     zero_stack:
+         if(r3 == value_stack) goto waiting using r5
+         r3 := value_stack
+         goto waiting
+
+
 
     print_stack:
-        //HOW DO WE DO THIS PIECE OF MEMORY PROPERLY ARGH
-        m[r0][10000] := r3
+        #m[r0][10000] := r3
+        push r3 on stack r2
         goto print_loop
 
         print_loop:
@@ -118,25 +199,21 @@ r0 := 0
         goto print_loop
 
         reset_value_ptr:
-        r3 := m[r0][10000]
+        #r3 := m[r0][10000]
+        pop r3 off stack r2
         goto waiting
 
-    print_top:
-        r4 := m[r0][r3]
-        output "top of stack: "
-        goto print linking r1
-        goto waiting
+
 
 //MAIN LOOP OF CALCULATOR
 .section text
+    main:
     waiting:
-        output "waiting\n"
         r4 := input()
         #how do we check if the input is an integer
         goto waiting_with_character
 
     waiting_with_character:
-        output "waiting with char\n"
         r5 := ~0
         if (r5 == r4) goto finish using r1
 
@@ -145,11 +222,10 @@ r0 := 0
         goto r5
 
     entering:
-        output "entering\n"
         r4 := input()
         if(r4 >s 57) goto waiting_with_character using r5
         if(r4 <s 48) goto waiting_with_character using r5
-        output "two digits\n"
+        #output "two digits\n"
         #make sure num going to the stack is not in ASCII
         pop r5 off stack r3
         r5 := r5 * 10
@@ -159,16 +235,18 @@ r0 := 0
         r4 := r5
         #output r4 + 48
         #goto print linking r1
-        output "returned to entering?\n"
+        #output "returned to entering?\n"
         goto entering
 
     finish:
-        output "done!\n"
         #make sure to clean up stack before leaving
         halt
 
     input_error:
-        output "input error\n"
+        output "Unknown character '"
+        output r4
+        output "'\n"
+        goto waiting
 
 //CHECKS
 .section text
@@ -178,7 +256,7 @@ r0 := 0
         goto r1
 
     check_one:
-        output "in check one\n"
+        if(r3 == value_stack) goto error_one using r5
         r4 := r3 + 1
         if(r4 == value_stack) goto error_one using r5
         goto r1
@@ -189,4 +267,8 @@ r0 := 0
 
     error_one:
        output "Stack underflow---expected at least 2 elements\n"
+       goto waiting
+    div_zero:
+       push r0 on stack r3
+       output "Division by zero\n"
        goto waiting

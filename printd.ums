@@ -9,6 +9,9 @@ r0 := 0
         push r4 on stack r2
         r4 := m[r0][r2]
         if (r4 <s 0) goto print_neg using r5
+        r1 := 0x80000000
+        if (r4 == r1) goto print_neg_test using r5
+        after_neg:
         if (r4 <s 10) goto base_case using r5
 
         recursive_call:
@@ -32,6 +35,13 @@ r0 := 0
         goto r5
 
     print_neg:
+        pop r4 off stack r2
         output '-'
         r4 := -r4
-        goto print
+        push r4 on stack r2
+        goto after_neg
+
+    print_neg_test:
+        output '-'
+        output "2147483648\n"
+        goto finish_print

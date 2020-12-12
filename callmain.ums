@@ -1,0 +1,6 @@
+.zero r0
+.temp r6, r7
+
+.section init
+goto main
+halt
